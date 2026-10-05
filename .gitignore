@@ -1,0 +1,6 @@
+# Vagrant local state (VM ids, keys) — never commit
+.vagrant/
+
+# Logs / OS cruft
+*.log
+.DS_Store
