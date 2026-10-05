@@ -50,9 +50,25 @@ Your Kali needs an interface on Red A (192.168.56.0/24) to reach the gateway:
 Then from Kali run `nmap -sn 192.168.56.0/24` and you'll see the gateway at `.101`. You can keep a NAT interface too if you want Internet on Kali, it won't break the isolation.
 
 ## What's inside (attack surface)
-gateway `192.168.56.101` (rapid7/metasploitable3-ub1404), a service-rich Linux box: SSH, Samba, web apps, databases and more. This is your foothold and your pivot.
+The gateway and the Windows box are Metasploitable3 (Rapid7), which ship with a lot of intentionally vulnerable services. These are the main ones per box. Services take a few minutes to come up after boot, and exact availability depends on the upstream box.
 
-services-box `172.16.50.22` (internal), intentionally vulnerable:
+### gateway · `192.168.56.101` (metasploitable3-ub1404)
+Your foothold and your pivot. Service-rich Linux box.
+| Port | Service | Technique / CVE |
+|------|---------|-----------------|
+| 21 | ProFTPD 1.3.5 | mod_copy RCE (CVE-2015-3306) |
+| 22 | OpenSSH 6.6 | weak credentials (brute force) |
+| 80 | Drupal 7.x + web apps | Drupalgeddon (CVE-2014-3704), payroll_app SQLi, phpMyAdmin |
+| 139/445 | Samba 4.3 | share enumeration |
+| 631 | CUPS 1.7 | printing service enum |
+| 3306 | MySQL | weak credentials |
+| 6697 | UnrealIRCd | backdoor RCE (CVE-2010-2075) |
+| 8080 | Apache Tomcat | manager default creds, WAR deploy |
+| 9200 | ElasticSearch 1.x | RCE (CVE-2014-3120) |
+| local | Linux privesc | PwnKit / polkit (CVE-2021-4034), sudo misconfigs |
+
+### services-box · `172.16.50.22` (internal, custom)
+Built for this lab.
 | Port | Service | Technique |
 |------|---------|-----------|
 | 873 | rsync (module `public`, no auth) | anonymous list/read |
@@ -61,7 +77,26 @@ services-box `172.16.50.22` (internal), intentionally vulnerable:
 | 8000 | WordPress 5.0 (`admin:password`, `bob:bob123`) | `wpscan`, user enum |
 | 8080 `/cgi-bin/vuln.cgi` | Shellshock (CVE-2014-6271) | `User-Agent` RCE |
 
-windows `172.16.50.23` (internal, rapid7/metasploitable3-win2k8): SMB, RDP, WinRM (`vagrant:vagrant`), IIS, Jenkins, Tomcat, GlassFish, ElasticSearch and more.
+### windows · `172.16.50.23` (metasploitable3-win2k8)
+Credentials: `vagrant:vagrant` (also `administrator:vagrant`).
+| Port | Service | Technique / CVE |
+|------|---------|-----------------|
+| 21 | IIS FTP | weak credentials |
+| 22 | SSH | weak credentials |
+| 80 | IIS HTTP | HTTP.sys (CVE-2015-1635), Chinese Caidao webshell |
+| 139/445 | SMB | psexec, weak credentials |
+| 161/udp | SNMP | weak community string |
+| 1617 | JMX | CVE-2015-2342 |
+| 3000 | Ruby on Rails | CVE-2015-3224 |
+| 3306 | MySQL | weak authentication |
+| 3389 | RDP | weak credentials |
+| 4848 / 8080 / 8181 | GlassFish | CVE-2011-0807 |
+| 5985 | WinRM | weak credentials, `evil-winrm` |
+| 8020 | ManageEngine Desktop Central | CVE-2015-8249 |
+| 8282 | Struts / Tomcat / Axis2 | CVE-2016-3087, CVE-2009-3843, CVE-2010-0219 |
+| 8484 | Jenkins | unauthenticated script console RCE |
+| 8585 | WebDAV / WordPress / phpMyAdmin | PUT; WP NinjaForms (CVE-2016-1209); phpMyAdmin (CVE-2013-3238) |
+| 9200 | ElasticSearch | CVE-2014-3120 |
 
 ## The pivot (the whole point)
 1. Enumerate Red A and find the gateway (`192.168.56.101`).
